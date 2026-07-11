@@ -108,6 +108,17 @@ class CalculatorEngine:
             return "Error"
         return self._expression if self._expression else "0"
 
+    @property
+    def expression(self) -> str:
+        """Current expression text (empty when idle or in error)."""
+        if self._error:
+            return ""
+        return self._expression
+
+    @property
+    def in_error(self) -> bool:
+        return self._error
+
     def press(self, key: str) -> str:
         if self._error:
             self._reset()
