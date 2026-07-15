@@ -92,7 +92,46 @@ def _format_number(value: float) -> str:
     if abs(value - round(value)) < 1e-12 and abs(value) < 1e15:
         return str(int(round(value)))
     text = f"{value:.12g}"
+    if "e" in text.lower():
+        # Avoid scientific notation so % and ± can edit the display string.
+        if value == 0:
+            return "0"
+        abs_v = abs(value)
+        if abs_v < 1:
+            decimals = max(6, int(-math.floor(math.log10(abs_v))) + 2)
+            text = f"{value:.{decimals}f}".rstrip("0").rstrip(".")
+        else:
+            text = f"{value:.15f}".rstrip("0").rstrip(".")
+        if text in ("-0", "-0."):
+            return "0"
     return text
+
+
+def _last_operand_bounds(expr: str) -> tuple[int, int] | None:
+    """Return [start, end) slice bounds for the trailing numeric literal."""
+    if not expr:
+        return None
+    end = len(expr)
+    i = end - 1
+    saw_dot = False
+    while i >= 0:
+        ch = expr[i]
+        if ch.isdigit():
+            i -= 1
+            continue
+        if ch == "." and not saw_dot:
+            saw_dot = True
+            i -= 1
+            continue
+        break
+    start = i + 1
+    if start >= end:
+        return None
+    if start > 0 and expr[start - 1] == "-":
+        prev = expr[start - 2] if start >= 2 else ""
+        if start == 1 or prev in "+-*/^(":
+            start -= 1
+    return (start, end)
 
 
 class CalculatorEngine:
@@ -124,8 +163,9 @@ class CalculatorEngine:
             self._reset()
             if key == "C":
                 return self.display()
-            # Fall through and treat as fresh start for most keys.
             if key == "⌫":
+                return self.display()
+            if key in _APPLY_FUNCS | {"pi", "e", "±", "%"}:
                 return self.display()
 
         if key == "C":
@@ -194,11 +234,7 @@ class CalculatorEngine:
             return
         if not self._expression:
             return
-        # Remove multi-char tokens like "pi", "e" at the end when appropriate.
-        if self._expression.endswith("pi"):
-            self._expression = self._expression[:-2]
-        else:
-            self._expression = self._expression[:-1]
+        self._expression = self._expression[:-1]
 
     def _evaluate(self) -> None:
         if not self._expression:
@@ -268,12 +304,9 @@ class CalculatorEngine:
 
     def _input_lparen(self) -> None:
         self._start_fresh_if_needed_for_value()
-        if self._expression and self._expression[-1] in _DIGITS + {".", ")", "e"} | set("pi"):
-            # Implicit multiply: 2(3) or pi(
-            if self._expression[-1].isdigit() or self._expression[-1] in ".)e":
-                self._expression += "*("
-                return
-            if self._expression.endswith("pi"):
+        if self._expression:
+            last = self._expression[-1]
+            if last.isdigit() or last in {".", ")"}:
                 self._expression += "*("
                 return
         self._expression += "("
@@ -297,18 +330,21 @@ class CalculatorEngine:
             self._expression += "*" + value
         else:
             self._expression += value
+        self._just_evaluated = True
 
     def _current_number(self) -> str:
-        match = re.search(r"([+-]?\d*\.?\d*)$", self._expression)
-        return match.group(1) if match else ""
+        bounds = _last_operand_bounds(self._expression)
+        if not bounds:
+            return ""
+        return self._expression[bounds[0] : bounds[1]]
 
     def _replace_current_number(self, new_value: str) -> None:
-        match = re.search(r"([+-]?\d*\.?\d*)$", self._expression)
-        if not match or match.group(1) == "":
+        bounds = _last_operand_bounds(self._expression)
+        if not bounds:
             self._expression = new_value
             return
-        start = match.start(1)
-        self._expression = self._expression[:start] + new_value
+        start, end = bounds
+        self._expression = self._expression[:start] + new_value + self._expression[end:]
 
     def _negate(self) -> None:
         if self._just_evaluated and self._expression:

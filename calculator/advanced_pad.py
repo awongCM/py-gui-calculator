@@ -16,7 +16,7 @@ _ADVANCED_LAYOUT: list[list[tuple]] = [
     [("C", "C", "clear"), ("%", "%", "operator"), ("÷", "/", "operator"), ("×", "*", "operator"), ("−", "-", "operator")],
     [("7", "7", "number"), ("8", "8", "number"), ("9", "9", "number"), ("+", "+", "operator"), ("±", "±", "function")],
     [("4", "4", "number"), ("5", "5", "number"), ("6", "6", "number"), (".", ".", "number"), ("=", "=", "equals")],
-    [("1", "1", "number"), ("2", "2", "number"), ("3", "3", "number"), ("0", "0", "number", 2)],
+    [("1", "1", "number"), ("2", "2", "number"), ("3", "3", "number"), ("0", "0", "number"), ("=", "=", "equals")],
 ]
 
 

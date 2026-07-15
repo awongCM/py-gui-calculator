@@ -212,3 +212,57 @@ class TestAdvanced:
             calc.press(key)
         calc.press("square")
         assert calc.display() == "16"
+
+
+class TestRegression:
+    def test_paren_after_digit(self, calc):
+        for key in list("2*(3+1)="):
+            calc.press(key)
+        assert calc.display() == "8"
+
+    def test_paren_after_operator(self, calc):
+        for key in list("2+(3)="):
+            calc.press(key)
+        assert calc.display() == "5"
+
+    def test_implicit_multiply_paren(self, calc):
+        for key in list("2(3+1)="):
+            calc.press(key)
+        assert calc.display() == "8"
+
+    def test_percent_in_expression(self, calc):
+        for key in list("2+50%="):
+            calc.press(key)
+        assert calc.display() == "2.5"
+
+    def test_negate_after_subtraction(self, calc):
+        for key in list("1-2"):
+            calc.press(key)
+        calc.press("±")
+        assert calc.expression == "1--2"
+        calc.press("=")
+        assert calc.display() == "3"
+
+    def test_constant_then_digit_starts_fresh(self, calc):
+        calc.press("e")
+        calc.press("2")
+        assert calc.display() == "2"
+
+    def test_constant_then_operator_chains(self, calc):
+        calc.press("e")
+        calc.press("*")
+        calc.press("2")
+        calc.press("=")
+        assert float(calc.display()) == pytest.approx(2 * math.e)
+
+    def test_function_after_error_is_ignored(self, calc):
+        for key in list("1/0="):
+            calc.press(key)
+        calc.press("sin")
+        assert calc.display() == "0"
+
+    def test_digit_after_error_still_works(self, calc):
+        for key in list("1/0="):
+            calc.press(key)
+        calc.press("7")
+        assert calc.display() == "7"

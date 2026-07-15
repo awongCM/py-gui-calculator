@@ -7,19 +7,13 @@ from tkinter import Button, Frame, Label, StringVar, Tk
 from calculator.advanced_pad import AdvancedPad
 from calculator.basic_pad import BasicPad
 from calculator.engine import CalculatorEngine
+from calculator.expression import is_compound_expression
 from calculator.theme import COLORS, FONTS
 
 
 _UNARY_KEYS = frozenset(
     {"sin", "cos", "tan", "log", "ln", "sqrt", "square", "reciprocal", "abs"}
 )
-
-
-def _is_compound_expression(expr: str) -> bool:
-    """True when expr has operators beyond a single signed number."""
-    if any(ch in expr for ch in "+*/^()"):
-        return True
-    return "-" in expr[1:]
 
 
 class CalculatorApp:
@@ -175,7 +169,7 @@ class CalculatorApp:
             self._expr_var.set("")
         else:
             expr = self.engine.expression
-            if _is_compound_expression(expr):
+            if is_compound_expression(expr):
                 self._expr_var.set(expr)
 
         self._refresh_display()
